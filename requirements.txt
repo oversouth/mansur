@@ -2,3 +2,5 @@ fastapi
 sqlalchemy
 uvicorn
 websockets
+psycopg2-binary
+python-dotenv

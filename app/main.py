@@ -1,37 +1,38 @@
+import uvicorn
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
-app = FastAPI()
-localdb: dict[str, dict[str, str]] = {}
+
+from app.db import init_db
+from app.routers import conversations, messages, users
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
+
+app = FastAPI(
+    title="Mansur API",
+    description="REST API backed by PostgreSQL and SQLAlchemy",
+    version="0.1.0",
+    lifespan=lifespan,
+)
+
+app.include_router(users.router)
+app.include_router(conversations.router)
+app.include_router(messages.router)
+
 
 @app.get("/HelloWorld")
 def helloworld():
-    return "Hello World"
+    return {"message": "Hello World"}
 
-@app.post("/new_user")
-def new_user(info: dict):
-    name = info.get("name")
-    pwd = info.get("password")
 
-    if not name or not pwd:
-        return {"error": "name and password are required"}
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
-    # Указан encoding='utf-8' для исправления предупреждения W1514
-    with open(f"{name}.txt", "w", encoding="utf-8") as file:
-        file.write(f"name {name}\npassword {pwd}")
 
-    localdb[name] = {"name": name, "password": pwd}
-
-    return {"message": "user created"}
-
-@app.post("/whoami")
-def whoami(info: dict):
-    name = info.get("name")
-
-    if not name:
-        return {"error": "name is required"}
-
-    userprofile = localdb.get(name)
-
-    if userprofile:
-        return userprofile
-
-    return {"error": "user not found"}
+if __name__ == "__main__":
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
